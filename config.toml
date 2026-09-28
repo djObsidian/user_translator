@@ -1,0 +1,77 @@
+# Настройки pdftr. Пути относительны папке с этим файлом.
+
+[llama]
+# Папка с llama-server(.exe). setup.bat кладёт CPU-сборку сюда.
+bin_dir = "bin/llama"
+host = "127.0.0.1"
+port = 8765
+# 0 = пусть llama.cpp решит сам (обычно = число физических ядер)
+threads = 0
+
+[paths]
+models_dir = "models"
+work_dir = "work"
+
+[ocr]
+# Какой профиль из [ocr.profiles.*] использовать
+profile = "deepseek-ocr"
+# DPI рендера страниц для OCR. 200 обычно хватает, для мелкого шрифта 300.
+dpi = 200
+ctx = 16384
+max_tokens = 8192
+# Страница считается «с нормальным текстовым слоем», если в ней столько символов
+min_text_chars = 40
+
+[ocr.profiles.deepseek-ocr]
+# DeepSeek-OCR (3B MoE, ~0.5B активных): целая страница -> markdown, быстро на CPU
+repo = "ggml-org/DeepSeek-OCR-GGUF"
+model = "DeepSeek-OCR-Q8_0.gguf"
+mmproj = "mmproj-DeepSeek-OCR-Q8_0.gguf"
+prompt = "<|grounding|>Convert the document to markdown."
+image_first = true
+# <td>/<tr> are special tokens in DeepSeek-OCR's vocab; without this llama-server drops them
+server_args = ["--special"]
+
+[ocr.profiles.glm-ocr]
+# GLM-OCR (0.9B): очень точный на тексте, но обучен на вырезанных блоках, а не целых страницах
+repo = "ggml-org/GLM-OCR-GGUF"
+model = "GLM-OCR-Q8_0.gguf"
+mmproj = "mmproj-GLM-OCR-Q8_0.gguf"
+prompt = "Text Recognition:"
+
+[ocr.profiles.paddleocr-vl]
+# PaddleOCR-VL 1.6 (0.9B): в llama.cpp помечен как "may have degraded performance"
+repo = "PaddlePaddle/PaddleOCR-VL-1.6-GGUF"
+model = "PaddleOCR-VL-1.6-GGUF.gguf"
+mmproj = "PaddleOCR-VL-1.6-GGUF-mmproj.gguf"
+chat_template = "chat_template.jinja"
+prompt = "OCR:"
+image_first = true
+
+[translate]
+profile = "hy-mt2-30b"
+# Целевой язык по умолчанию (код или английское название, см. README)
+target = "ru"
+# Максимальная длина куска исходного текста за один запрос (символов).
+# Контекст Hy-MT2 = 8192 токена, так что не больше ~2500.
+chunk_chars = 1500
+ctx = 8192
+max_tokens = 4096
+
+[translate.profiles.hy-mt2-30b]
+# MoE 30B / 3B активных: качество большой модели, скорость ~3B. ~18 GB RAM.
+repo = "AngelSlim/Hy-MT2-30B-A3B-GGUF"
+model = "Hy-MT2-30B-A3B-Q4_K_M.gguf"
+sampling = { temperature = 0.7, top_p = 1.0, top_k = -1, repeat_penalty = 1.0 }
+
+[translate.profiles.hy-mt2-7b]
+# ~5 GB RAM
+repo = "tencent/Hy-MT2-7B-GGUF"
+model = "Hy-MT2-7B-Q4_K_M.gguf"
+sampling = { temperature = 0.7, top_p = 0.6, top_k = 20, repeat_penalty = 1.05 }
+
+[translate.profiles."hy-mt2-1.8b"]
+# ~1.5 GB RAM, самый быстрый
+repo = "tencent/Hy-MT2-1.8B-GGUF"
+model = "Hy-MT2-1.8B-Q4_K_M.gguf"
+sampling = { temperature = 0.7, top_p = 0.6, top_k = 20, repeat_penalty = 1.05 }
