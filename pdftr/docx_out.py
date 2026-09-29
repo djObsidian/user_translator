@@ -10,7 +10,7 @@ from docx.enum.text import WD_BREAK
 from docx.oxml.ns import qn
 from docx.shared import Pt
 
-from .markdown import Block, html_table_rows
+from .markdown import Block, html_table_rows, image_path
 
 # **bold**, __bold__, *italic*, _italic_, `code`
 _INLINE = re.compile(r"(\*\*.+?\*\*|__.+?__|(?<!\w)\*[^*\s][^*]*?\*|(?<!\w)_[^_\s][^_]*?_(?!\w)|`[^`]+`)")
@@ -49,6 +49,20 @@ def _add_table(doc, rows: list[list[str]]) -> None:
     doc.add_paragraph()
 
 
+def _add_picture(doc, image: Path) -> None:
+    try:
+        pic = doc.add_picture(str(image))
+    except Exception as e:  # unsupported or broken image: skip it, keep the text
+        print(f"  ! картинка не вставлена в DOCX: {image.name}: {e}", flush=True)
+        return
+    sec = doc.sections[-1]
+    max_w = sec.page_width - sec.left_margin - sec.right_margin
+    max_h = sec.page_height - sec.top_margin - sec.bottom_margin
+    k = min(1.0, max_w / pic.width, max_h / pic.height)
+    if k < 1.0:
+        pic.width, pic.height = int(pic.width * k), int(pic.height * k)
+
+
 def write_docx(pages: list[list[Block]], path: Path, page_breaks: bool = True) -> None:
     doc = Document()
     normal = doc.styles["Normal"]
@@ -85,6 +99,8 @@ def write_docx(pages: list[list[Block]], path: Path, page_breaks: bool = True) -
             elif b.kind == "math":
                 run = doc.add_paragraph().add_run(b.raw.strip().strip("$").removeprefix("\\[").removesuffix("\\]").strip())
                 run.font.name = "Cambria Math"
-            # raw (hr, image placeholders, comments) is not rendered
+            elif b.kind == "raw" and (image := image_path(b.raw)) and image.is_file():
+                _add_picture(doc, image)
+            # other raw blocks (hr, comments) are not rendered
     path.parent.mkdir(parents=True, exist_ok=True)
     doc.save(path)

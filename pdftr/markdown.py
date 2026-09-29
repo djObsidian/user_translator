@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
 import unicodedata
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
+from pathlib import Path
 from typing import Callable
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 _LIST = re.compile(r"^(\s*)([-*+•]|\d{1,3}[.)])\s+(.*)$")
 _HR = re.compile(r"^\s*([-*_])(\s*\1){2,}\s*$")
-_IMAGE = re.compile(r"^\s*!\[[^\]]*\]\([^)]*\)\s*$")
+# Whole-line image; the path is greedy because Windows paths may contain parentheses
+_IMAGE = re.compile(r"^\s*!\[([^\]]*)\]\((.*)\)\s*$")
 _TABLE_SEP = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$")
 _HTML_CELL = re.compile(r"(<t[dh]\b[^>]*>)(.*?)(</t[dh]>)", re.S | re.I)
 _CJK_CHAR = re.compile(r"[　-〿぀-ヿ㐀-䶿一-鿿가-힯＀-￯]")
@@ -25,6 +29,28 @@ class Block:
     level: int = 0
     rows: list[list[str]] = field(default_factory=list)
     raw: str = ""
+
+
+def image_path(line: str) -> Path | None:
+    """Path of a whole-line markdown image, if the line is one."""
+    m = _IMAGE.match(line)
+    return Path(m.group(2).strip().strip("<>")) if m else None
+
+
+def relink_images(md: str, md_dir: Path, img_dir: Path) -> str:
+    """Copy images referenced by absolute paths into img_dir and point the links there, relative to md_dir."""
+
+    def sub(line: str) -> str:
+        src = image_path(line)
+        if src is None or not src.is_absolute() or not src.is_file():
+            return line
+        img_dir.mkdir(parents=True, exist_ok=True)
+        dst = img_dir / src.name
+        shutil.copyfile(src, dst)
+        rel = os.path.relpath(dst, md_dir).replace("\\", "/")
+        return f"![{_IMAGE.match(line).group(1)}](<{rel}>)"
+
+    return "\n".join(sub(line) for line in md.split("\n"))
 
 
 def has_letters(text: str) -> bool:

@@ -65,6 +65,10 @@ class Config:
     def translate(self) -> dict:
         return self.raw["translate"]
 
+    @property
+    def output(self) -> dict:
+        return self.raw.get("output", {})
+
     def llama_server_exe(self) -> Path:
         exe = "llama-server.exe" if sys.platform == "win32" else "llama-server"
         bin_dir = self.path(self.llama["bin_dir"])

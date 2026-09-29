@@ -48,6 +48,17 @@ chat_template = "chat_template.jinja"
 prompt = "OCR:"
 image_first = true
 
+[output]
+# pdf  - переведённый PDF с исходной вёрсткой: картинки, чертежи, таблицы остаются на месте
+# docx - Word со структурой (заголовки, списки, таблицы, картинки), вёрстка страниц не сохраняется
+# md   - Markdown, как docx
+# Для страниц с текстовым слоем docx/md режут текст на абзацы иначе, чем pdf,
+# поэтому pdf вместе с docx/md переводится дольше, чем что-то одно
+formats = ["pdf"]
+# Шрифт перевода в PDF. Если файла нет, берутся встроенные шрифты MuPDF.
+font_regular = "C:/Windows/Fonts/arial.ttf"
+font_bold = "C:/Windows/Fonts/arialbd.ttf"
+
 [translate]
 profile = "hy-mt2-30b"
 # Целевой язык по умолчанию (код или английское название, см. README)
